@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Entrenamiento Baloncesto - Día 1</title>
+<style>
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #111;
+    color: #eee;
+    margin: 0; padding: 2rem;
+  }
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #666;
+    padding-bottom: 0.5rem;
+  }
+  h3 {
+    cursor: pointer;
+    user-select: none;
+    margin: 1.5rem 0 0.5rem 0;
+    padding: 0.3rem 0.5rem;
+    background: #222;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+  }
+  h3:hover {
+    background: #333;
+  }
+  .content {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.4s ease;
+    background: #222;
+    padding: 0 1rem;
+    border-radius: 0 0 8px 8px;
+  }
+  .content.open {
+    padding: 1rem;
+    max-height: 2000px; /* suficientemente grande */
+  }
+  p, li {
+    font-size: 1.1rem;
+    line-height: 1.4;
+  }
+  ul {
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+  /* Estilos del listado de ejercicios (del bloque Dribble Workout) */
+  .exercise {
+    margin-bottom: 1rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #111;
+    transition: background 0.3s;
+  }
+  .exercise.done {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+  .exercise strong {
+    color: #0ff;
+  }
+  .rep-count {
+    font-weight: 700;
+    color: #0ff;
+  }
+  .note {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+  }
+  .sets {
+    margin-top: 0.4rem;
+  }
+  .set {
+    margin-right: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    color: #666;
+    font-weight: bold;
+  }
+  .set.checked {
+    color: #0f0;
+  }
+</style>
+</head>
+<body>
+
+<h1>DÍA 1</h1>
+
+<section>
+  <h3>Calentamiento</h3>
+  <div class="content">
+    <p>Trote suave 5 minutos para activar el cuerpo.</p>
+  </div>
+</section>
+
+<section>
+  <h3>Dribble Workout</h3>
+  <div class="content" id="dribble-workout">
+    <!-- Aquí se cargarán los ejercicios dinámicos -->
+  </div>
+</section>
+
+<section>
+  <h3>Tiros</h3>
+  <div class="content">
+    <p>10 series de triples, enfócate en la técnica y el seguimiento.</p>
+  </div>
+</section>
+
+<section>
+  <h3>Estiramiento</h3>
+  <div class="content">
+    <p>Gemelos y tobillos — estirar cada músculo al menos 30 segundos.</p>
+  </div>
+</section>
+
+<script>
+  // Lógica para desplegar/plegar las secciones
+  document.querySelectorAll('h3').forEach(h3 => {
+    h3.addEventListener('click', () => {
+      const content = h3.nextElementSibling;
+      if (content.classList.contains('open')) {
+        content.classList.remove('open');
+      } else {
+        content.classList.add('open');
+      }
+    });
+  });
+
+  // Ejercicios para Dribble Workout (del código que diste)
+  const exercises = [
+    { text: 'Pound R - Cambiando peso', type: 'time', duration: 2 },
+    { text: 'Pound L - Cambiando peso', type: 'time', duration: 2 },
+    { text: 'Cross - Cambiando peso', type: 'time', duration: 2 },
+    { text: 'Pound + Joke cross', type: 'time', duration: 2 },
+    { text: 'Joke cross', type: 'time', duration: 2 },
+    { text: 'Pound + BTL + xDetrás', type: 'reps', reps: 10 },
+    { text: 'BTL Split', type: 'reps', reps: 20, note: 'Neutro+pound, split+BTL, neutro+pound…' },
+    { text: 'Avanzar: Pound + Cross', type: 'reps', reps: 10, sets: 4 },
+    { text: 'Avanzar: Pound + BTL', type: 'reps', reps: 10, sets: 4 },
+    { text: 'Avanzar: (Pound + Cross) + (Pound + BTL)', type: 'reps', reps: 10, sets: 4 },
+  ];
+
+  const container = document.getElementById('dribble-workout');
+
+  function createExerciseElement(ex) {
+    const div = document.createElement('div');
+    div.classList.add('exercise');
+
+    let innerHTML = `<strong>${ex.text}</strong>`;
+    if (ex.type === 'time') {
+      innerHTML += ` <span>(duración: ${ex.duration}s)</span>`;
+    } else {
+      innerHTML += ` <span class="rep-count">x${ex.reps}</span>`;
+    }
+
+    if (ex.note) {
+      innerHTML += `<div class="note">${ex.note}</div>`;
+    }
+    if (ex.sets) {
+      innerHTML += `<div class="sets">${[...Array(ex.sets)].map(() => '<span class="set">◯</span>').join(' ')}</div>`;
+    }
+
+    div.innerHTML = innerHTML;
+
+    // Click para marcar como hecho (para reps)
+    if (ex.type === 'reps') {
+      div.addEventListener('click', () => div.classList.toggle('done'));
+    }
+
+    // Sets interactivos
+    const setsEls = div.querySelectorAll('.set');
+    setsEls.forEach((set, index) => {
+      set.addEventListener('click', e => {
+        e.stopPropagation();
+        for (let j = 0; j <= index; j++) setsEls[j].classList.add('checked');
+        for (let j = index + 1; j < setsEls.length; j++) setsEls[j].classList.remove('checked');
+
+        const allChecked = [...setsEls].every(s => s.classList.contains('checked'));
+        if (allChecked) div.classList.add('done');
+        else div.classList.remove('done');
+      });
+    });
+
+    return div;
+  }
+
+  exercises.forEach(ex => {
+    container.appendChild(createExerciseElement(ex));
+  });
+</script>
+
+</body>
+</html>
