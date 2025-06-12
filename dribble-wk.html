@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>5 min Dribble Workout</title>
   <style>
     body {
@@ -25,6 +26,10 @@
       font-size: 1.5rem;
       margin-top: 0.5rem;
     }
+    .reps {
+  margin-top: 0.3rem;
+  cursor: pointer;
+}
     #playBtn {
       font-size: 1.5rem;
       padding: 1rem 2rem;
@@ -59,10 +64,16 @@
 
   <script>
     const exercises = [
-      { text: '1 mano - Cambiando peso', type: 'time', duration: 2 },
-      { text: 'Cambio - cross - Cambiando peso', type: 'time', duration: 2 },
-      { text: 'Cambio - Pound + Joke cross', type: 'reps' },
-      { text: 'Cambio - solo Joke cross', type: 'reps' },
+      { text: 'Pound R - Cambiando peso', type: 'time', duration: 2 },
+      { text: 'Pound L - Cambiando peso', type: 'time', duration: 2 },
+      { text: 'Cross - Cambiando peso', type: 'time', duration: 2 },
+      { text: 'Pound + Joke cross', type: 'time', duration: 2 },
+      { text: 'Joke cross', type: 'time', duration: 2 },
+      { text: 'Pound + BTL + xDetrás', type: 'reps', reps: 10 },
+      { text: 'BTL Split', type: 'reps', reps: 20 },
+      { text: 'Avanzar: Pound + Cross', type: 'reps', reps: 10 },
+      { text: 'Avanzar: Pound + BTL', type: 'reps', reps: 10 },
+      { text: 'Avanzar: (Pound + Cross) + (Pound + BTL)', type: 'reps', reps: 10 },
     ];
 
     const exContainer = document.getElementById('exercises');
@@ -72,10 +83,14 @@
       const div = document.createElement('div');
       div.classList.add('exercise');
       div.dataset.index = i;
-      div.innerHTML = `
-        <div><strong>${ex.text}</strong></div>
-        ${ex.type === 'time' ? `<div class="timer" contenteditable="true">${ex.duration}</div>` : '<div class="reps clickable">Haz clic para marcar</div>'}
-      `;
+     div.innerHTML = `
+  <div><strong>${ex.text}</strong></div>
+  ${
+    ex.type === 'time'
+      ? `<div class="timer" contenteditable="true">${ex.duration}</div>`
+      : `<div class="reps" contenteditable="true" style="font-size: 1.2rem;">${ex.reps || ''} repeticiones</div>`
+  }
+`;
       if (ex.type === 'reps') {
         div.addEventListener('click', () => div.classList.toggle('done'));
       }
