@@ -30,6 +30,31 @@
   margin-top: 0.3rem;
   cursor: pointer;
 }
+    .rep-count {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #0ff;
+}
+
+.note {
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  color: #ccc;
+}
+
+.sets {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.set {
+  margin-right: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+}
+.set.checked {
+  color: #0f0;
+}
     #playBtn {
       font-size: 1.5rem;
       padding: 1rem 2rem;
@@ -70,10 +95,10 @@
       { text: 'Pound + Joke cross', type: 'time', duration: 2 },
       { text: 'Joke cross', type: 'time', duration: 2 },
       { text: 'Pound + BTL + xDetrás', type: 'reps', reps: 10 },
-      { text: 'BTL Split', type: 'reps', reps: 20 },
-      { text: 'Avanzar: Pound + Cross', type: 'reps', reps: 10 },
-      { text: 'Avanzar: Pound + BTL', type: 'reps', reps: 10 },
-      { text: 'Avanzar: (Pound + Cross) + (Pound + BTL)', type: 'reps', reps: 10 },
+      { text: 'BTL Split', type: 'reps', reps: 20, note: 'Neutro+pound, split+BTL, neutro+pound…' },
+      { text: 'Avanzar: Pound + Cross', type: 'reps', reps: 10, sets: 4 },
+      { text: 'Avanzar: Pound + BTL', type: 'reps', reps: 10, sets: 4 },
+      { text: 'Avanzar: (Pound + Cross) + (Pound + BTL)', type: 'reps', reps: 10, sets: 4 },
     ];
 
     const exContainer = document.getElementById('exercises');
@@ -84,17 +109,28 @@
       div.classList.add('exercise');
       div.dataset.index = i;
      div.innerHTML = `
-  <div><strong>${ex.text}</strong></div>
-  ${
-    ex.type === 'time'
-      ? `<div class="timer" contenteditable="true">${ex.duration}</div>`
-      : `<div class="reps" contenteditable="true" style="font-size: 1.2rem;">${ex.reps || ''} repeticiones</div>`
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <strong>${ex.text}</strong>
+    ${ex.type === 'reps' ? `<span class="rep-count">x${ex.reps}</span>` : ''}
+  </div>
+  ${ex.type === 'time'
+    ? `<div class="timer" contenteditable="true">${ex.duration}</div>`
+    : `
+      <div class="note" contenteditable="true">${ex.note || ''}</div>
+      ${ex.sets ? `<div class="sets">${[...Array(ex.sets)].map(() => '<span class="set">◯</span>').join(' ')}</div>` : ''}
+    `
   }
 `;
       if (ex.type === 'reps') {
         div.addEventListener('click', () => div.classList.toggle('done'));
       }
       exContainer.appendChild(div);
+      const setEls = div.querySelectorAll('.set');
+setEls.forEach(set => {
+  set.addEventListener('click', () => {
+    set.classList.toggle('checked');
+  });
+});
     });
 
     const beep = () => {
