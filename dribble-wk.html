@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>5 min Dribble Workout</title>
   <style>
     body {
@@ -27,43 +27,44 @@
       margin-top: 0.5rem;
     }
     .reps {
-  margin-top: 0.3rem;
-  cursor: pointer;
-}
-    .rep-count {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #0ff;
-}
-
-.note {
-  font-size: 1rem;
-  margin-top: 0.5rem;
-  color: #ccc;
-}
-
-.sets {
-  margin-top: 0.5rem;
-  font-size: 1.5rem;
-}
-
-.set {
-  margin-right: 0.4rem;
-  cursor: pointer;
-  user-select: none;
-}
-.set.checked {
-  color: #0f0;
-}
-    #playBtn {
-      font-size: 1.5rem;
-      padding: 1rem 2rem;
-      background: #28a745;
-      border: none;
-      border-radius: 8px;
-      color: white;
+      margin-top: 0.3rem;
       cursor: pointer;
-      margin-bottom: 2rem;
+    }
+    .rep-count {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #0ff;
+    }
+    .note {
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      color: #ccc;
+    }
+    .sets {
+      margin-top: 0.5rem;
+      font-size: 1.5rem;
+    }
+    .set {
+      margin-right: 0.4rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .set.checked {
+      color: #0f0;
+    }
+    .done {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .timer-controls button {
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      margin: 2px;
+    }
+    .time-block {
+      border-left: 2px solid #555;
+      margin: 1rem 0;
+      padding-left: 1rem;
     }
     #overlay {
       position: fixed;
@@ -83,7 +84,10 @@
   </style>
 </head>
 <body>
-  <button id="playBtn">Play</button>
+  <div class="timer-controls">
+    <button class="play-btn" id="playBtn">▶</button>
+    <button class="stop-btn" id="stopBtn" style="display:none;">■</button>
+  </div>
   <div id="exercises"></div>
   <div id="overlay"></div>
 
@@ -103,35 +107,64 @@
 
     const exContainer = document.getElementById('exercises');
     const overlay = document.getElementById('overlay');
+    const stopBtn = document.getElementById('stopBtn');
+    const playBtn = document.getElementById('playBtn');
 
-    exercises.forEach((ex, i) => {
+    function createExerciseElement(ex) {
       const div = document.createElement('div');
-      div.classList.add('exercise');
-      div.dataset.index = i;
-     div.innerHTML = `
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <strong>${ex.text}</strong>
-    ${ex.type === 'reps' ? `<span class="rep-count">x${ex.reps}</span>` : ''}
-  </div>
-  ${ex.type === 'time'
-    ? `<div class="timer" contenteditable="true">${ex.duration}</div>`
-    : `
-      <div class="note" contenteditable="true">${ex.note || ''}</div>
-      ${ex.sets ? `<div class="sets">${[...Array(ex.sets)].map(() => '<span class="set">◯</span>').join(' ')}</div>` : ''}
-    `
-  }
-`;
-      if (ex.type === 'reps') {
+      div.className = 'exercise';
+      div.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong>${ex.text}</strong>
+          ${ex.type === 'reps' ? `<span class="rep-count">x${ex.reps}</span>` : ''}
+        </div>
+        ${ex.type === 'time'
+          ? `<div class="timer" contenteditable="true">${ex.duration}</div>`
+          : `
+            <div class="note" contenteditable="true">${ex.note || ''}</div>
+            ${ex.sets ? `<div class="sets">${[...Array(ex.sets)].map(() => '<span class="set">◯</span>').join(' ')}</div>` : ''}`}
+      `;
+
+      if (ex.type === 'reps' && !ex.sets) {
         div.addEventListener('click', () => div.classList.toggle('done'));
       }
-      exContainer.appendChild(div);
+
       const setEls = div.querySelectorAll('.set');
-setEls.forEach(set => {
-  set.addEventListener('click', () => {
-    set.classList.toggle('checked');
-  });
-});
-    });
+      setEls.forEach(set => {
+        set.addEventListener('click', (e) => {
+          e.stopPropagation();
+          set.classList.toggle('checked');
+          const allChecked = [...set.parentNode.querySelectorAll('.set')].every(s => s.classList.contains('checked'));
+          const exDiv = set.closest('.exercise');
+          if (allChecked) {
+            exDiv.classList.add('done');
+          } else {
+            exDiv.classList.remove('done');
+          }
+        });
+      });
+
+      return div;
+    }
+
+    let i = 0;
+    while (i < exercises.length) {
+      if (exercises[i].type === 'time') {
+        const block = document.createElement('div');
+        block.className = 'time-block';
+
+        while (i < exercises.length && exercises[i].type === 'time') {
+          const div = createExerciseElement(exercises[i]);
+          block.appendChild(div);
+          i++;
+        }
+        exContainer.appendChild(block);
+      } else {
+        const div = createExerciseElement(exercises[i]);
+        exContainer.appendChild(div);
+        i++;
+      }
+    }
 
     const beep = () => {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -145,8 +178,13 @@ setEls.forEach(set => {
 
     const sleep = ms => new Promise(res => setTimeout(res, ms));
 
-    document.getElementById('playBtn').addEventListener('click', async () => {
+    let timerInterval = null;
+
+    playBtn.addEventListener('click', async () => {
       const items = document.querySelectorAll('.exercise');
+      playBtn.style.display = 'none';
+      stopBtn.style.display = 'inline';
+
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const type = exercises[i].type;
@@ -161,9 +199,9 @@ setEls.forEach(set => {
           }
 
           beep();
+          item.classList.add('done');
           item.style.background = 'green';
 
-          // 3 sec countdown overlay
           for (let j = 3; j > 0; j--) {
             overlay.innerText = j;
             overlay.style.display = 'flex';
@@ -171,11 +209,17 @@ setEls.forEach(set => {
           }
           overlay.style.display = 'none';
           item.style.background = '';
-        } else {
-          // Wait for user click to mark
-          continue;
         }
       }
+      playBtn.style.display = 'inline';
+      stopBtn.style.display = 'none';
+    });
+
+    stopBtn.addEventListener('click', () => {
+      if (timerInterval) clearInterval(timerInterval);
+      overlay.style.display = 'none';
+      stopBtn.style.display = 'none';
+      playBtn.style.display = 'inline';
     });
   </script>
 </body>
