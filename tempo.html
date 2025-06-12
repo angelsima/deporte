@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Temporizador 20s + 3s</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 100px;
+    }
+    button {
+      font-size: 1.5rem;
+      padding: 1rem 2rem;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="startStopBtn">Iniciar</button>
+  <div id="status">Parado</div>
+
+  <script>
+    let intervalId = null;
+    let running = false;
+    const status = document.getElementById("status");
+    const button = document.getElementById("startStopBtn");
+
+    // Función para reproducir un pitido
+    function beep() {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      oscillator.type = 'square';
+      oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime); // 1000 Hz
+      oscillator.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.2); // 200ms beep
+    }
+
+    function startCycle() {
+      let cycle = () => {
+        status.textContent = "20s contando...";
+        const workTimer = setTimeout(() => {
+          beep();
+          status.textContent = "Pausa de 3s...";
+          setTimeout(() => {
+            if (running) cycle(); // repetir si sigue activo
+          }, 3000);
+        }, 20000);
+      };
+      cycle();
+    }
+
+    button.addEventListener("click", () => {
+      running = !running;
+      if (running) {
+        button.textContent = "Parar";
+        status.textContent = "Iniciado";
+        startCycle();
+      } else {
+        button.textContent = "Iniciar";
+        status.textContent = "Parado";
+      }
+    });
+  </script>
+
+</body>
+</html>
