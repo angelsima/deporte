@@ -33,58 +33,6 @@
       background: #222;
       color: #eee;
     }
-    .zone-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
-    }
-    .zone-card {
-      background: #222;
-      padding: 0.8rem 1rem;
-      border: 1px solid #444;
-      border-radius: 8px;
-    }
-    .zone-card label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: bold;
-      font-size: 0.95rem;
-    }
-    .zone-card input[type="number"] {
-      width: 100%;
-      padding: 0.4rem;
-      border-radius: 4px;
-      border: 1px solid #555;
-      background: #111;
-      color: #eee;
-      font-size: 1rem;
-    }
-    .zone-card input[type="number"]::-webkit-inner-spin-button,
-    .zone-card input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    .zone-card input[type="number"] {
-      -moz-appearance: textfield;
-    }
-    #submit-btn {
-      margin-top: 1.5rem;
-      padding: 0.8rem 1.5rem;
-      font-size: 1rem;
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    #submit-btn:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-    #message {
-      margin-top: 1rem;
-      font-size: 1rem;
-    }
     details {
       margin-bottom: 1rem;
       border: 1px solid #444;
@@ -107,12 +55,77 @@
     .details-content {
       padding: 0 1rem 1rem 1rem;
     }
+    .zone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .zone-card {
+      background: #222;
+      padding: 0.8rem 1rem;
+      border: 1px solid #444;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .zone-card label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    .input-pair {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.3rem;
+    }
+    .input-pair input[type="number"] {
+      width: 100%;
+      padding: 0.4rem;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #111;
+      color: #eee;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .input-pair input[type="number"]::-webkit-inner-spin-button,
+    .input-pair input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .input-pair input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    .input-pair .slash {
+      flex: none;
+      color: #ccc;
+      font-size: 1.2rem;
+    }
+    #submit-btn {
+      margin-top: 1.5rem;
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #submit-btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    #message {
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Test Inicial de Tiros: 10 tiros por zona</h1>
-  <p>Introduce el número de aciertos (de 0 a 10) para las zonas que efectivamente has probado. Los que dejes en blanco se omiten al guardar.</p>
+  <h1>Test Inicial de Tiros</h1>
+  <p>Introduce el número de aciertos (de 0 en adelante) y el número de tiros (intentos, por defecto 10) para cada zona que hayas probado. Si dejas "aciertos" en blanco, se omite esa zona al guardar.</p>
 
   <!-- Selector para saltar a posiciones -->
   <div id="position-select-container">
@@ -123,7 +136,7 @@
   </div>
 
   <div id="zones-container">
-    <!-- Aquí se generarán <details> por posición -->
+    <!-- Se generarán <details> por posición con su grid de zonas -->
   </div>
 
   <button id="submit-btn">Guardar resultados</button>
@@ -131,6 +144,7 @@
 
   <!-- Firebase v9 modular SDK desde CDN -->
   <script type="module">
+    // Importa Firebase modular desde CDN
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import {
       getFirestore,
@@ -140,7 +154,7 @@
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     // --------------------------------------------------
-    // Tu configuración de Firebase:
+    // TU CONFIG DE FIREBASE:
     const firebaseConfig = {
       apiKey: "AIzaSyCE19zdOFwGQyxJSw-idhIjIzLT3a9Wntk",
       authDomain: "deporte-597c6.firebaseapp.com",
@@ -151,6 +165,7 @@
     };
     // --------------------------------------------------
 
+    // Inicializa Firebase y Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
@@ -173,106 +188,179 @@
       { key: '0R', label: '0º R' }
     ];
 
+    // Referencias DOM
     const container = document.getElementById('zones-container');
-    const positionSelect = document.getElementById('position-select');
+    const selectPos = document.getElementById('position-select');
     const submitBtn = document.getElementById('submit-btn');
     const msgDiv = document.getElementById('message');
 
-    // Crear <option> para el select de posiciones
+    // 1) Generar el selector de posiciones
     posiciones.forEach(pos => {
       const opt = document.createElement('option');
-      opt.value = pos.key;
+      opt.value = pos.key; // coincide con id del <details>
       opt.textContent = pos.label;
-      positionSelect.appendChild(opt);
+      selectPos.appendChild(opt);
     });
 
-    // Generar los <details> por posición
+    // 2) Generar <details> por cada posición
     posiciones.forEach(pos => {
       const detailsEl = document.createElement('details');
-      detailsEl.id = `details-${pos.key}`;
-      // Por ejemplo: <summary>Poste bajo</summary>
+      detailsEl.id = `pos-${pos.key}`; // p.e. "pos-Poste_bajo"
+      // Por defecto cerrado. Si quieres alguno abierto al inicio, agrega detailsEl.open = true.
       const summaryEl = document.createElement('summary');
       summaryEl.textContent = pos.label;
       detailsEl.appendChild(summaryEl);
 
       const contentDiv = document.createElement('div');
-      contentDiv.className = 'details-content zone-grid';
-      // Para cada ángulo, crear tarjeta e input
+      contentDiv.className = 'details-content';
+
+      // Dentro, un grid de zonas (ángulos)
+      const grid = document.createElement('div');
+      grid.className = 'zone-grid';
+
       angulos.forEach(ang => {
+        // Por cada zona, creamos un card con dos inputs: aciertos y intentos
         const card = document.createElement('div');
         card.className = 'zone-card';
-        const inputId = `input-${pos.key}-${ang.key}`;
-        const labelText = `${pos.label} - ${ang.label}`;
-        card.innerHTML = `
-          <label for="${inputId}">${labelText}</label>
-          <input 
-            type="number" 
-            id="${inputId}" 
-            name="${inputId}"
-            min="0" max="10" 
-            value="" 
-            placeholder="0–10"
-            inputmode="numeric"
-          />
-        `;
-        contentDiv.appendChild(card);
+
+        // label descriptivo
+        const label = document.createElement('label');
+        label.setAttribute('for', `input-${pos.key}-${ang.key}-aciertos`);
+        label.textContent = `${pos.label.replace('_',' ')} - ${ang.label}`;
+        card.appendChild(label);
+
+        // contenedor de inputs
+        const pairDiv = document.createElement('div');
+        pairDiv.className = 'input-pair';
+
+        // input aciertos
+        const inpAciertos = document.createElement('input');
+        inpAciertos.type = 'number';
+        inpAciertos.id = `input-${pos.key}-${ang.key}-aciertos`;
+        inpAciertos.name = inpAciertos.id;
+        inpAciertos.placeholder = 'Aciertos';
+        inpAciertos.min = '0';
+        inpAciertos.inputMode = 'numeric';
+        // no max fijo aquí, se actualizará dinámicamente según intentos
+        inpAciertos.style.flex = '1';
+
+        // slash fijo
+        const slash = document.createElement('span');
+        slash.className = 'slash';
+        slash.textContent = '/';
+
+        // input intentos
+        const inpIntentos = document.createElement('input');
+        inpIntentos.type = 'number';
+        inpIntentos.id = `input-${pos.key}-${ang.key}-intentos`;
+        inpIntentos.name = inpIntentos.id;
+        inpIntentos.placeholder = 'Intentos';
+        inpIntentos.min = '1';
+        inpIntentos.value = '10'; // valor por defecto
+        inpIntentos.inputMode = 'numeric';
+        inpIntentos.style.flex = '1';
+
+        // Cuando cambie intentos, ajustar max de aciertos y validar valor actual
+        inpIntentos.addEventListener('input', () => {
+          let valInt = parseInt(inpIntentos.value, 10);
+          if (isNaN(valInt) || valInt < 1) {
+            valInt = 1;
+            inpIntentos.value = '1';
+          }
+          // Ajustar atributo max en aciertos
+          inpAciertos.max = String(valInt);
+          // Si aciertos ya escrito > valInt, corregirlo
+          const valA = parseInt(inpAciertos.value, 10);
+          if (!isNaN(valA) && valA > valInt) {
+            inpAciertos.value = String(valInt);
+          }
+        });
+
+        // Inicialmente ajustar max de aciertos a 10
+        inpAciertos.max = '10';
+
+        pairDiv.appendChild(inpAciertos);
+        pairDiv.appendChild(slash);
+        pairDiv.appendChild(inpIntentos);
+
+        card.appendChild(pairDiv);
+        grid.appendChild(card);
       });
+
+      contentDiv.appendChild(grid);
       detailsEl.appendChild(contentDiv);
       container.appendChild(detailsEl);
     });
 
-    // Cuando el usuario cambia el select de posición, desplegar esa sección y hacer scroll
-    positionSelect.addEventListener('change', () => {
-      const sel = positionSelect.value; // p.ej. 'Poste_bajo'
-      if (!sel) return;
+    // 3) Selector de posición: al cambiar, cerrar todos y abrir solo la elegida, y hacer scroll
+    selectPos.addEventListener('change', () => {
+      const selected = selectPos.value; // p.e. "Poste_bajo" o ""
       // Cerrar todos
       posiciones.forEach(pos => {
-        const det = document.getElementById(`details-${pos.key}`);
+        const det = document.getElementById(`pos-${pos.key}`);
         if (det) det.open = false;
       });
-      // Abrir el seleccionado
-      const target = document.getElementById(`details-${sel}`);
-      if (target) {
-        target.open = true;
-        // Hacer scroll suave
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (selected) {
+        const detSel = document.getElementById(`pos-${selected}`);
+        if (detSel) {
+          detSel.open = true;
+          // Scroll suave
+          detSel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }
     });
 
-    // Función para leer valores y guardar solo los no vacíos
+    // 4) Guardar resultados a Firestore al hacer click en botón
     submitBtn.addEventListener('click', async () => {
       msgDiv.textContent = '';
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Guardando...';
+      msgDiv.style.color = '#eee';
 
+      // Recorrer todas las zonas, solo procesar si aciertos tiene valor no vacío
       const fechaLocal = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
       const promesas = [];
       let anyError = false;
-      let countToSave = 0;
+      let anyEntry = false;
 
       posiciones.forEach(pos => {
         angulos.forEach(ang => {
-          const inputId = `input-${pos.key}-${ang.key}`;
-          const inp = document.getElementById(inputId);
-          const valStr = inp.value.trim();
-          if (valStr === "") {
-            // omitimos zona no ingresada
+          const idAciertos = `input-${pos.key}-${ang.key}-aciertos`;
+          const idIntentos = `input-${pos.key}-${ang.key}-intentos`;
+          const inpA = document.getElementById(idAciertos);
+          const inpI = document.getElementById(idIntentos);
+          if (!inpA || !inpI) return;
+          const valA_str = inpA.value.trim();
+          if (valA_str === "") {
+            // omitir esta zona
             return;
           }
-          const aciertosNum = Number(valStr);
-          if (isNaN(aciertosNum) || aciertosNum < 0 || aciertosNum > 10) {
+          anyEntry = true;
+          // Parsear valores
+          let aciertosNum = parseInt(valA_str, 10);
+          let intentosNum = parseInt(inpI.value.trim(), 10);
+          // Validar intentos:
+          if (isNaN(intentosNum) || intentosNum < 1) {
             anyError = true;
-            console.warn(`Valor inválido en ${pos.key}-${ang.key}: ${valStr}`);
+            console.warn(`Intentos inválido en ${pos.key}-${ang.key}: ${inpI.value}`);
             return;
           }
-          countToSave++;
+          // Validar aciertos:
+          if (isNaN(aciertosNum) || aciertosNum < 0) {
+            anyError = true;
+            console.warn(`Aciertos inválido en ${pos.key}-${ang.key}: ${valA_str}`);
+            return;
+          }
+          if (aciertosNum > intentosNum) {
+            // corregir a max
+            aciertosNum = intentosNum;
+          }
+          // Preparar envío
           promesas.push(
             addDoc(collection(db, "testInicialTiros"), {
               fechaRegistro: serverTimestamp(),
               fechaLocal: fechaLocal,
-              posicion: pos.key.replace(/_/g, ' '), // p.ej. "Poste bajo"
-              angulo: ang.key, // p.ej. "45L"
-              intentos: 10,
+              posicion: pos.key.replace('_', ' '),
+              angulo: ang.key,
+              intentos: intentosNum,
               aciertos: aciertosNum
             }).catch(err => {
               console.error("Error guardando:", err);
@@ -282,14 +370,15 @@
         });
       });
 
-      if (countToSave === 0) {
-        // Si no se ingresó ningún valor
+      if (!anyEntry) {
         msgDiv.style.color = '#f55';
-        msgDiv.textContent = 'No has ingresado aciertos en ninguna zona. Introduce al menos un valor para guardar.';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Guardar resultados';
+        msgDiv.textContent = 'No hay ningún acierto introducido. Escribe al menos un valor de aciertos para guardar.';
         return;
       }
+
+      // Deshabilitar durante envío
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando...';
 
       try {
         await Promise.all(promesas);
@@ -300,18 +389,21 @@
 
       if (anyError) {
         msgDiv.style.color = '#f55';
-        msgDiv.textContent = 'Ha ocurrido algún error guardando. Revisa la consola y vuelve a intentarlo.';
+        msgDiv.textContent = 'Ocurrió algún error guardando. Revisa consola y vuelve a intentarlo.';
       } else {
         msgDiv.style.color = '#0f0';
-        msgDiv.textContent = `Se guardaron ${countToSave} zona(s) con éxito.`;
-        // Opcional: limpiar solo los inputs guardados
+        msgDiv.textContent = 'Resultados guardados con éxito.';
+        // Opcional: limpiar solo los campos que guardamos (dejando en blanco los aciertos)
         posiciones.forEach(pos => {
           angulos.forEach(ang => {
-            const inputId = `input-${pos.key}-${ang.key}`;
-            const inp = document.getElementById(inputId);
-            if (inp && inp.value.trim() !== "") {
-              inp.value = '';
+            const inpA = document.getElementById(`input-${pos.key}-${ang.key}-aciertos`);
+            // si tenía valor, limpiar
+            if (inpA && inpA.value.trim() !== "") {
+              inpA.value = "";
             }
+            // Mantener intentos en el valor que el usuario dejó, o reiniciar a 10 si prefieres:
+            // const inpI = document.getElementById(`input-${pos.key}-${ang.key}-intentos`);
+            // if (inpI) inpI.value = "10";
           });
         });
       }
@@ -319,6 +411,8 @@
       submitBtn.disabled = false;
       submitBtn.textContent = 'Guardar resultados';
     });
+
+    // Inicial: no abre nada hasta que el usuario seleccione o haga scroll manual
   </script>
 </body>
 </html>
