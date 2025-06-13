@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Estadísticas de Tiros</title>
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    #container {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    #court-img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .zone-marker {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: bold;
+      pointer-events: none;
+      /* background-color se asignará dinámicamente según tasa */
+    }
+    /* Leyenda de color */
+    #legend {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    .legend-box {
+      width: 20px;
+      height: 20px;
+      border: 1px solid #444;
+    }
+    /* Tabla de estadísticas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 0.4rem 0.6rem;
+      text-align: center;
+    }
+    th {
+      background: #222;
+    }
+    td {
+      background: #1a1a1a;
+    }
+    #loading {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    #error {
+      color: #f55;
+      margin-top: 1rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Estadísticas de Tiros por Zona</h1>
+  <p>Se muestran los porcentajes de acierto en cada zona (posición + ángulo), superpuestos sobre un diagrama de pista. Los marcadores se colorean de rojo (bajo acierto) a verde (alto acierto).</p>
+  <div id="container">
+    <!-- Imagen de pista: diagrama público de Wikimedia Commons -->
+    <img id="court-img" src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Basketball_court_dimensions.png" alt="Diagrama de pista de baloncesto (dominio público)">
+    <!-- Aquí se insertarán dinámicamente los div.zone-marker -->
+  </div>
+  <div id="legend">
+    <span>Leyenda: </span>
+    <div class="legend-box" style="background: rgb(255,0,0);"></div><span>0%</span>
+    <div class="legend-box" style="background: rgb(255,255,0);"></div><span>50%</span>
+    <div class="legend-box" style="background: rgb(0,255,0);"></div><span>100%</span>
+  </div>
+  <div id="loading">Cargando datos...</div>
+  <div id="error"></div>
+  <table id="stats-table">
+    <thead>
+      <tr>
+        <th>Posición</th>
+        <th>Ángulo</th>
+        <th>Aciertos Totales</th>
+        <th>Intentos Totales</th>
+        <th>% Acierto</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Filas generadas dinámicamente -->
+    </tbody>
+  </table>
+
+  <!-- Firebase v9 modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // --------------------------------------------------
+    // TU CONFIG DE FIREBASE:
+    const firebaseConfig = {
+      apiKey: "AIzaSyCE19zdOFwGQyxJSw-idhIjIzLT3a9Wntk",
+      authDomain: "deporte-597c6.firebaseapp.com",
+      projectId: "deporte-597c6",
+      storageBucket: "deporte-597c6.firebasestorage.app",
+      messagingSenderId: "140373189508",
+      appId: "1:140373189508:web:bd5270d7c79764222273d1"
+    };
+    // --------------------------------------------------
+
+    // Inicializa Firebase y Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Definición de posiciones y ángulos, mismo formato que tu guardado
+    const posiciones = [
+      { key: 'Poste bajo', label: 'Poste bajo' },
+      { key: 'Media', label: 'Media' },
+      { key: 'Tiro libre', label: 'Tiro libre' },
+      { key: 'Triple', label: 'Triple' }
+    ];
+    const angulos = [
+      { key: '0L', label: '0º L' },
+      { key: '30L', label: '30º L' },
+      { key: '45L', label: '45º L' },
+      { key: '60L', label: '60º L' },
+      { key: '90', label: '90º' },
+      { key: '60R', label: '60º R' },
+      { key: '45R', label: '45º R' },
+      { key: '30R', label: '30º R' },
+      { key: '0R', label: '0º R' }
+    ];
+
+    // Coordenadas aproximadas (en %) para cada combinación.
+    // left: porcentaje desde el borde izquierdo de la imagen; top: desde el borde superior.
+    // Ajusta según tu imagen o preferencia visual.
+    // Estas coordenadas asumen una vista de medio campo con canasta abajo (por ejemplo) o ajuste de tu diagrama.
+    // Aquí se propone un mapeo aproximado: Distancias: Poste bajo cerca de la canasta, Media, Tiro libre, Triple más lejos.
+    // Angulos se distribuyen en anchura de la parte de tiro.
+    const zoneCoordinates = {
+      // Para cada posición, asignamos un factor vertical (top%)
+      // Suponiendo la canasta en la parte inferior de la imagen. Ajusta estos valores a la imagen real.
+      'Poste bajo':   { top: 80 },
+      'Media':        { top: 65 },
+      'Tiro libre':   { top: 50 },
+      'Triple':       { top: 35 }
+    };
+    // Para ángulos, factor horizontal (left%) relativo al centro de la pista
+    // Suponiendo ancho de imagen: 0% izquierda extremo, 100% derecha extremo. Centro ~50%.
+    const angleOffsets = {
+      '0L':  10,
+      '30L': 25,
+      '45L': 35,
+      '60L': 45,
+      '90':  50,
+      '60R': 55,
+      '45R': 65,
+      '30R': 75,
+      '0R':  90
+    };
+
+    const container = document.getElementById('container');
+    const loadingDiv = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    const statsTableBody = document.querySelector('#stats-table tbody');
+
+    // Función para interpolar color de rojo a verde según ratio [0..1]
+    function getColorForRatio(ratio) {
+      // ratio 0 => rojo (255,0,0), ratio 1 => verde (0,255,0), ratio 0.5 => amarillo (255,255,0)
+      const r = Math.round((1 - ratio) * 255);
+      const g = Math.round(ratio * 255);
+      return `rgba(${r},${g},0,0.7)`;
+    }
+
+    async function fetchAndRender() {
+      try {
+        const querySnapshot = await getDocs(collection(db, "testInicialTiros"));
+        // Agregar datos en un objeto: stats[posicion][angulo] = { totalAciertos, totalIntentos }
+        const stats = {};
+        // Inicializar
+        posiciones.forEach(pos => {
+          stats[pos.key] = {};
+          angulos.forEach(ang => {
+            stats[pos.key][ang.key] = { totalAciertos: 0, totalIntentos: 0 };
+          });
+        });
+        // Recorrer documentos
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          const pos = data.posicion;    // ej. 'Poste bajo'
+          const ang = data.angulo;      // ej. '45L'
+          const intentos = Number(data.intentos) || 0;
+          const aciertos = Number(data.aciertos) || 0;
+          if (stats[pos] && stats[pos][ang]) {
+            stats[pos][ang].totalAciertos += aciertos;
+            stats[pos][ang].totalIntentos += intentos;
+          }
+        });
+        // Eliminar marcador previo si existe
+        document.querySelectorAll('.zone-marker').forEach(el => el.remove());
+        // Vaciar tabla
+        statsTableBody.innerHTML = '';
+
+        // Obtener dimensiones reales de la imagen tras carga
+        const img = document.getElementById('court-img');
+        // Asegurarse de que la imagen está cargada
+        if (!img.complete) {
+          await new Promise(res => {
+            img.onload = res;
+            img.onerror = res;
+          });
+        }
+        // Ahora recorrer stats para crear marcadores y filas de tabla
+        posiciones.forEach(pos => {
+          angulos.forEach(ang => {
+            const { totalAciertos, totalIntentos } = stats[pos.key][ang.key];
+            if (totalIntentos > 0) {
+              const ratio = totalAciertos / totalIntentos;
+              // Coordenadas
+              let topPerc = zoneCoordinates[pos.key]?.top;
+              let leftPerc = angleOffsets[ang.key];
+              if (topPerc == null || leftPerc == null) {
+                // Si no está mapeada, omitir
+                return;
+              }
+              // Crear marcador
+              const marker = document.createElement('div');
+              marker.className = 'zone-marker';
+              marker.style.top = `calc(${topPerc}% - 12px)`;   // centrar 24px/2
+              marker.style.left = `calc(${leftPerc}% - 12px)`;
+              marker.style.backgroundColor = getColorForRatio(ratio);
+              // Texto: porcentaje redondeado
+              marker.textContent = `${Math.round(ratio * 100)}%`;
+              container.appendChild(marker);
+
+              // Agregar fila a la tabla
+              const tr = document.createElement('tr');
+              const tdPos = document.createElement('td');
+              tdPos.textContent = pos.label || pos.key;
+              const tdAng = document.createElement('td');
+              const angLabelObj = angulos.find(a => a.key === ang);
+              tdAng.textContent = angLabelObj ? angLabelObj.label : ang;
+              const tdAci = document.createElement('td');
+              tdAci.textContent = totalAciertos;
+              const tdInt = document.createElement('td');
+              tdInt.textContent = totalIntentos;
+              const tdPerc = document.createElement('td');
+              tdPerc.textContent = `${Math.round(ratio * 100)}%`;
+              tr.append(tdPos, tdAng, tdAci, tdInt, tdPerc);
+              statsTableBody.appendChild(tr);
+            }
+          });
+        });
+
+        loadingDiv.style.display = 'none';
+      } catch (err) {
+        console.error("Error cargando estadísticas:", err);
+        loadingDiv.style.display = 'none';
+        errorDiv.textContent = 'Error cargando datos de Firestore. Revisa la consola.';
+      }
+    }
+
+    // Ejecutar al cargar la página
+    window.addEventListener('load', () => {
+      fetchAndRender();
+    });
+  </script>
+</body>
+</html>
