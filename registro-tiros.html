@@ -9,17 +9,33 @@
       background: #111;
       color: #eee;
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0; padding: 1rem;
+      margin: 0;
+      padding: 1rem;
     }
     h1 {
       font-size: 2rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
       border-bottom: 2px solid #444;
       padding-bottom: 0.3rem;
     }
+    p {
+      margin-top: 0.2rem;
+      margin-bottom: 1rem;
+    }
+    #position-select-container {
+      margin-bottom: 1rem;
+    }
+    #position-select {
+      padding: 0.4rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #222;
+      color: #eee;
+    }
     .zone-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 1rem;
     }
     .zone-card {
@@ -32,6 +48,7 @@
       display: block;
       margin-bottom: 0.5rem;
       font-weight: bold;
+      font-size: 0.95rem;
     }
     .zone-card input[type="number"] {
       width: 100%;
@@ -68,15 +85,45 @@
       margin-top: 1rem;
       font-size: 1rem;
     }
+    details {
+      margin-bottom: 1rem;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #222;
+    }
+    summary {
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      font-weight: bold;
+      user-select: none;
+      list-style: none;
+    }
+    summary:hover {
+      background: #333;
+    }
+    details[open] summary {
+      background: #333;
+    }
+    .details-content {
+      padding: 0 1rem 1rem 1rem;
+    }
   </style>
 </head>
 <body>
 
   <h1>Test Inicial de Tiros: 10 tiros por zona</h1>
-  <p>Introduce el número de aciertos (de 0 a 10) para cada combinación de posición + ángulo.</p>
+  <p>Introduce el número de aciertos (de 0 a 10) para las zonas que efectivamente has probado. Los que dejes en blanco se omiten al guardar.</p>
 
-  <div id="zones-container" class="zone-grid">
-    <!-- Se generará dinámicamente -->
+  <!-- Selector para saltar a posiciones -->
+  <div id="position-select-container">
+    <label for="position-select">Ir a posición:</label>
+    <select id="position-select">
+      <option value="">--Selecciona posición--</option>
+    </select>
+  </div>
+
+  <div id="zones-container">
+    <!-- Aquí se generarán <details> por posición -->
   </div>
 
   <button id="submit-btn">Guardar resultados</button>
@@ -84,7 +131,6 @@
 
   <!-- Firebase v9 modular SDK desde CDN -->
   <script type="module">
-    // Importa Firebase modular desde CDN
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import {
       getFirestore,
@@ -94,26 +140,25 @@
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     // --------------------------------------------------
-    // AQUÍ COMPLETA CON TU CONFIG DE FIREBASE:
-   const firebaseConfig = {
-  apiKey: "AIzaSyCE19zdOFwGQyxJSw-idhIjIzLT3a9Wntk",
-  authDomain: "deporte-597c6.firebaseapp.com",
-  projectId: "deporte-597c6",
-  storageBucket: "deporte-597c6.firebasestorage.app",
-  messagingSenderId: "140373189508",
-  appId: "1:140373189508:web:bd5270d7c79764222273d1"
-};
+    // Tu configuración de Firebase:
+    const firebaseConfig = {
+      apiKey: "AIzaSyCE19zdOFwGQyxJSw-idhIjIzLT3a9Wntk",
+      authDomain: "deporte-597c6.firebaseapp.com",
+      projectId: "deporte-597c6",
+      storageBucket: "deporte-597c6.firebasestorage.app",
+      messagingSenderId: "140373189508",
+      appId: "1:140373189508:web:bd5270d7c79764222273d1"
+    };
     // --------------------------------------------------
 
-    // Inicializa Firebase y Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     // Definición de posiciones y ángulos
     const posiciones = [
-      { key: 'Poste bajo', label: 'Poste bajo' },
+      { key: 'Poste_bajo', label: 'Poste bajo' },
       { key: 'Media', label: 'Media' },
-      { key: 'Tiro libre', label: 'Tiro libre' },
+      { key: 'Tiro_libre', label: 'Tiro libre' },
       { key: 'Triple', label: 'Triple' }
     ];
     const angulos = [
@@ -128,19 +173,35 @@
       { key: '0R', label: '0º R' }
     ];
 
-    // Referencias DOM
     const container = document.getElementById('zones-container');
+    const positionSelect = document.getElementById('position-select');
     const submitBtn = document.getElementById('submit-btn');
     const msgDiv = document.getElementById('message');
 
-    // Generar inputs dinámicamente
-    // Para cada combinación, se crea un div.zone-card con label y input number
+    // Crear <option> para el select de posiciones
     posiciones.forEach(pos => {
+      const opt = document.createElement('option');
+      opt.value = pos.key;
+      opt.textContent = pos.label;
+      positionSelect.appendChild(opt);
+    });
+
+    // Generar los <details> por posición
+    posiciones.forEach(pos => {
+      const detailsEl = document.createElement('details');
+      detailsEl.id = `details-${pos.key}`;
+      // Por ejemplo: <summary>Poste bajo</summary>
+      const summaryEl = document.createElement('summary');
+      summaryEl.textContent = pos.label;
+      detailsEl.appendChild(summaryEl);
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'details-content zone-grid';
+      // Para cada ángulo, crear tarjeta e input
       angulos.forEach(ang => {
         const card = document.createElement('div');
         card.className = 'zone-card';
-        // id para referenciar luego: por ejemplo "input-Poste bajo-0L"
-        const inputId = `input-${pos.key.replace(/\s+/g, '_')}-${ang.key}`;
+        const inputId = `input-${pos.key}-${ang.key}`;
         const labelText = `${pos.label} - ${ang.label}`;
         card.innerHTML = `
           <label for="${inputId}">${labelText}</label>
@@ -154,71 +215,82 @@
             inputmode="numeric"
           />
         `;
-        container.appendChild(card);
+        contentDiv.appendChild(card);
       });
+      detailsEl.appendChild(contentDiv);
+      container.appendChild(detailsEl);
     });
 
-    // Función para leer los valores, validar y enviar a Firestore
+    // Cuando el usuario cambia el select de posición, desplegar esa sección y hacer scroll
+    positionSelect.addEventListener('change', () => {
+      const sel = positionSelect.value; // p.ej. 'Poste_bajo'
+      if (!sel) return;
+      // Cerrar todos
+      posiciones.forEach(pos => {
+        const det = document.getElementById(`details-${pos.key}`);
+        if (det) det.open = false;
+      });
+      // Abrir el seleccionado
+      const target = document.getElementById(`details-${sel}`);
+      if (target) {
+        target.open = true;
+        // Hacer scroll suave
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    // Función para leer valores y guardar solo los no vacíos
     submitBtn.addEventListener('click', async () => {
       msgDiv.textContent = '';
-      // Deshabilitar mientras se envía
       submitBtn.disabled = true;
       submitBtn.textContent = 'Guardando...';
 
-      const fechaISO = new Date().toISOString(); // ej. "2025-06-13T...Z"
       const fechaLocal = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
-
       const promesas = [];
       let anyError = false;
-      // Recorrer cada combinación de posición+ángulo
+      let countToSave = 0;
+
       posiciones.forEach(pos => {
         angulos.forEach(ang => {
-          const inputId = `input-${pos.key.replace(/\s+/g, '_')}-${ang.key}`;
+          const inputId = `input-${pos.key}-${ang.key}`;
           const inp = document.getElementById(inputId);
           const valStr = inp.value.trim();
           if (valStr === "") {
-            // Si está vacío, interpretamos como 0 aciertos (o ignorar?)
-            // Aquí guardamos también 0: si prefieres ignorar, omite este bloque.
-            const aciertos = 0;
-            // Creamos doc; si quisieras ignorar zonas no trabajadas, salta este addDoc
-            promesas.push(
-              addDoc(collection(db, "testInicialTiros"), {
-                fechaRegistro: serverTimestamp(),
-                fechaLocal: fechaLocal,
-                posicion: pos.key,
-                angulo: ang.key,
-                intentos: 10,
-                aciertos: aciertos
-              }).catch(err => {
-                console.error("Error guardando:", err);
-                anyError = true;
-              })
-            );
-          } else {
-            const aciertosNum = Number(valStr);
-            if (isNaN(aciertosNum) || aciertosNum < 0 || aciertosNum > 10) {
-              anyError = true;
-              console.warn(`Valor inválido en ${pos.key}-${ang.key}: ${valStr}`);
-            } else {
-              promesas.push(
-                addDoc(collection(db, "testInicialTiros"), {
-                  fechaRegistro: serverTimestamp(),
-                  fechaLocal: fechaLocal,
-                  posicion: pos.key,
-                  angulo: ang.key,
-                  intentos: 10,
-                  aciertos: aciertosNum
-                }).catch(err => {
-                  console.error("Error guardando:", err);
-                  anyError = true;
-                })
-              );
-            }
+            // omitimos zona no ingresada
+            return;
           }
+          const aciertosNum = Number(valStr);
+          if (isNaN(aciertosNum) || aciertosNum < 0 || aciertosNum > 10) {
+            anyError = true;
+            console.warn(`Valor inválido en ${pos.key}-${ang.key}: ${valStr}`);
+            return;
+          }
+          countToSave++;
+          promesas.push(
+            addDoc(collection(db, "testInicialTiros"), {
+              fechaRegistro: serverTimestamp(),
+              fechaLocal: fechaLocal,
+              posicion: pos.key.replace(/_/g, ' '), // p.ej. "Poste bajo"
+              angulo: ang.key, // p.ej. "45L"
+              intentos: 10,
+              aciertos: aciertosNum
+            }).catch(err => {
+              console.error("Error guardando:", err);
+              anyError = true;
+            })
+          );
         });
       });
 
-      // Esperar todos los envíos
+      if (countToSave === 0) {
+        // Si no se ingresó ningún valor
+        msgDiv.style.color = '#f55';
+        msgDiv.textContent = 'No has ingresado aciertos en ninguna zona. Introduce al menos un valor para guardar.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar resultados';
+        return;
+      }
+
       try {
         await Promise.all(promesas);
       } catch (e) {
@@ -231,9 +303,17 @@
         msgDiv.textContent = 'Ha ocurrido algún error guardando. Revisa la consola y vuelve a intentarlo.';
       } else {
         msgDiv.style.color = '#0f0';
-        msgDiv.textContent = 'Resultados guardados con éxito.';
-        // Opcional: limpiar inputs o mantener
-        // container.querySelectorAll('input[type="number"]').forEach(i=>i.value='');
+        msgDiv.textContent = `Se guardaron ${countToSave} zona(s) con éxito.`;
+        // Opcional: limpiar solo los inputs guardados
+        posiciones.forEach(pos => {
+          angulos.forEach(ang => {
+            const inputId = `input-${pos.key}-${ang.key}`;
+            const inp = document.getElementById(inputId);
+            if (inp && inp.value.trim() !== "") {
+              inp.value = '';
+            }
+          });
+        });
       }
 
       submitBtn.disabled = false;
