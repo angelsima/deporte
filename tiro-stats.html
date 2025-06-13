@@ -39,7 +39,7 @@
       font-size: 0.7rem;
       font-weight: bold;
       pointer-events: none;
-      /* background-color se asignará dinámicamente según tasa */
+      /* background-color asignada dinámicamente según porcentaje */
     }
     /* Leyenda de color */
     #legend {
@@ -85,17 +85,18 @@
 </head>
 <body>
   <h1>Estadísticas de Tiros por Zona</h1>
-  <p>Se muestran los porcentajes de acierto en cada zona (posición + ángulo), superpuestos sobre un diagrama de pista. Los marcadores se colorean de rojo (bajo acierto) a verde (alto acierto).</p>
+  <p>Se muestran porcentajes de acierto en cada zona (posición + ángulo), superpuestos sobre un diagrama de pista. Marcadores van de rojo (bajo acierto) a verde (alto acierto).</p>
   <div id="container">
-    <!-- Imagen de pista: diagrama público de Wikimedia Commons -->
-    <img id="court-img" src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Basketball_court_dimensions.png" alt="Diagrama de pista de baloncesto (dominio público)">
-    <!-- Aquí se insertarán dinámicamente los div.zone-marker -->
+    <!-- Se usa el SVG de pista de Wikimedia Commons (diagrama en dominio público) -->
+    <img id="court-img" src="https://upload.wikimedia.org/wikipedia/commons/7/7a/Basketball_Court_SVG.svg"
+         alt="Diagrama de pista de baloncesto (dominio público)">
+    <!-- Aquí se insertarán los div.zone-marker -->
   </div>
   <div id="legend">
     <span>Leyenda: </span>
-    <div class="legend-box" style="background: rgb(255,0,0);"></div><span>0%</span>
-    <div class="legend-box" style="background: rgb(255,255,0);"></div><span>50%</span>
-    <div class="legend-box" style="background: rgb(0,255,0);"></div><span>100%</span>
+    <div class="legend-box" style="background: rgba(255,0,0,0.7);"></div><span>0%</span>
+    <div class="legend-box" style="background: rgba(255,255,0,0.7);"></div><span>50%</span>
+    <div class="legend-box" style="background: rgba(0,255,0,0.7);"></div><span>100%</span>
   </div>
   <div id="loading">Cargando datos...</div>
   <div id="error"></div>
@@ -135,11 +136,10 @@
     };
     // --------------------------------------------------
 
-    // Inicializa Firebase y Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Definición de posiciones y ángulos, mismo formato que tu guardado
+    // Mis definiciones de posiciones y ángulos
     const posiciones = [
       { key: 'Poste bajo', label: 'Poste bajo' },
       { key: 'Media', label: 'Media' },
@@ -158,22 +158,14 @@
       { key: '0R', label: '0º R' }
     ];
 
-    // Coordenadas aproximadas (en %) para cada combinación.
-    // left: porcentaje desde el borde izquierdo de la imagen; top: desde el borde superior.
-    // Ajusta según tu imagen o preferencia visual.
-    // Estas coordenadas asumen una vista de medio campo con canasta abajo (por ejemplo) o ajuste de tu diagrama.
-    // Aquí se propone un mapeo aproximado: Distancias: Poste bajo cerca de la canasta, Media, Tiro libre, Triple más lejos.
-    // Angulos se distribuyen en anchura de la parte de tiro.
+    // Coordenadas aproximadas (en %) para cada posición y ángulo.
+    // Ajusta según cómo se vea el SVG en tu layout.
     const zoneCoordinates = {
-      // Para cada posición, asignamos un factor vertical (top%)
-      // Suponiendo la canasta en la parte inferior de la imagen. Ajusta estos valores a la imagen real.
       'Poste bajo':   { top: 80 },
       'Media':        { top: 65 },
       'Tiro libre':   { top: 50 },
       'Triple':       { top: 35 }
     };
-    // Para ángulos, factor horizontal (left%) relativo al centro de la pista
-    // Suponiendo ancho de imagen: 0% izquierda extremo, 100% derecha extremo. Centro ~50%.
     const angleOffsets = {
       '0L':  10,
       '30L': 25,
@@ -191,9 +183,7 @@
     const errorDiv = document.getElementById('error');
     const statsTableBody = document.querySelector('#stats-table tbody');
 
-    // Función para interpolar color de rojo a verde según ratio [0..1]
     function getColorForRatio(ratio) {
-      // ratio 0 => rojo (255,0,0), ratio 1 => verde (0,255,0), ratio 0.5 => amarillo (255,255,0)
       const r = Math.round((1 - ratio) * 255);
       const g = Math.round(ratio * 255);
       return `rgba(${r},${g},0,0.7)`;
@@ -202,20 +192,17 @@
     async function fetchAndRender() {
       try {
         const querySnapshot = await getDocs(collection(db, "testInicialTiros"));
-        // Agregar datos en un objeto: stats[posicion][angulo] = { totalAciertos, totalIntentos }
         const stats = {};
-        // Inicializar
         posiciones.forEach(pos => {
           stats[pos.key] = {};
           angulos.forEach(ang => {
             stats[pos.key][ang.key] = { totalAciertos: 0, totalIntentos: 0 };
           });
         });
-        // Recorrer documentos
         querySnapshot.forEach(doc => {
           const data = doc.data();
-          const pos = data.posicion;    // ej. 'Poste bajo'
-          const ang = data.angulo;      // ej. '45L'
+          const pos = data.posicion;
+          const ang = data.angulo;
           const intentos = Number(data.intentos) || 0;
           const aciertos = Number(data.aciertos) || 0;
           if (stats[pos] && stats[pos][ang]) {
@@ -223,47 +210,37 @@
             stats[pos][ang].totalIntentos += intentos;
           }
         });
-        // Eliminar marcador previo si existe
         document.querySelectorAll('.zone-marker').forEach(el => el.remove());
-        // Vaciar tabla
         statsTableBody.innerHTML = '';
 
-        // Obtener dimensiones reales de la imagen tras carga
+        // Asegurar que la imagen SVG se ha cargado
         const img = document.getElementById('court-img');
-        // Asegurarse de que la imagen está cargada
         if (!img.complete) {
           await new Promise(res => {
             img.onload = res;
             img.onerror = res;
           });
         }
-        // Ahora recorrer stats para crear marcadores y filas de tabla
+
         posiciones.forEach(pos => {
           angulos.forEach(ang => {
             const { totalAciertos, totalIntentos } = stats[pos.key][ang.key];
             if (totalIntentos > 0) {
               const ratio = totalAciertos / totalIntentos;
-              // Coordenadas
-              let topPerc = zoneCoordinates[pos.key]?.top;
-              let leftPerc = angleOffsets[ang.key];
-              if (topPerc == null || leftPerc == null) {
-                // Si no está mapeada, omitir
-                return;
-              }
-              // Crear marcador
+              const topPerc = zoneCoordinates[pos.key]?.top;
+              const leftPerc = angleOffsets[ang.key];
+              if (topPerc == null || leftPerc == null) return;
               const marker = document.createElement('div');
               marker.className = 'zone-marker';
-              marker.style.top = `calc(${topPerc}% - 12px)`;   // centrar 24px/2
+              marker.style.top = `calc(${topPerc}% - 12px)`;
               marker.style.left = `calc(${leftPerc}% - 12px)`;
               marker.style.backgroundColor = getColorForRatio(ratio);
-              // Texto: porcentaje redondeado
               marker.textContent = `${Math.round(ratio * 100)}%`;
               container.appendChild(marker);
 
-              // Agregar fila a la tabla
               const tr = document.createElement('tr');
               const tdPos = document.createElement('td');
-              tdPos.textContent = pos.label || pos.key;
+              tdPos.textContent = pos.label;
               const tdAng = document.createElement('td');
               const angLabelObj = angulos.find(a => a.key === ang);
               tdAng.textContent = angLabelObj ? angLabelObj.label : ang;
@@ -287,7 +264,6 @@
       }
     }
 
-    // Ejecutar al cargar la página
     window.addEventListener('load', () => {
       fetchAndRender();
     });
