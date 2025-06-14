@@ -194,86 +194,86 @@
       return `rgba(${r},${g},0,0.7)`;
     }
 
-    async function fetchAndRender() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "testInicialTiros"));
-        // Inicializar estructura de acumulados
-        const stats = {};
-        posiciones.forEach(pos => {
-          stats[pos.key] = {};
-          angulos.forEach(ang => {
-            stats[pos.key][ang.key] = { totalAciertos: 0, totalIntentos: 0 };
-          });
+ async function fetchAndRender() {
+    try {
+      const querySnapshot = await getDocs(collection(db, "testInicialTiros"));
+      // Inicializar estructura de acumulados
+      const stats = {};
+      posiciones.forEach(pos => {
+        stats[pos.key] = {};
+        angulos.forEach(ang => {
+          stats[pos.key][ang.key] = { totalAciertos: 0, totalIntentos: 0 };
         });
-        // Sumar datos de Firestore
-        querySnapshot.forEach(doc => {
-          const data = doc.data();
-          const pos = data.posicion;    // ej. 'Poste bajo'
-          const ang = data.angulo;      // ej. '45L'
-          const intentos = Number(data.intentos) || 0;
-          const aciertos = Number(data.aciertos) || 0;
-          if (stats[pos] && stats[pos][ang]) {
-            stats[pos][ang].totalAciertos += aciertos;
-            stats[pos][ang].totalIntentos += intentos;
+      });
+      // Sumar datos de Firestore
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const pos = data.posicion;    // ej. 'Poste bajo'
+        const ang = data.angulo;      // ej. '45L'
+        const intentos = Number(data.intentos) || 0;
+        const aciertos = Number(data.aciertos) || 0;
+        if (stats[pos] && stats[pos][ang]) {
+          stats[pos][ang].totalAciertos += aciertos;
+          stats[pos][ang].totalIntentos += intentos;
+        }
+      });
+      // Eliminar marcadores previos y vaciar tabla
+      document.querySelectorAll('.zone-marker').forEach(el => el.remove());
+      statsTableBody.innerHTML = '';
+
+      // Asegurar que la imagen local se ha cargado
+      const img = document.getElementById('court-img');
+      if (!img.complete) {
+        await new Promise(res => {
+          img.onload = res;
+          img.onerror = res;
+        });
+      }
+
+      // Por cada posición y ángulo, si hay intentos, crear marcador y fila de tabla
+      posiciones.forEach(pos => {
+        angulos.forEach(ang => {
+          const { totalAciertos, totalIntentos } = stats[pos.key][ang.key];
+          if (totalIntentos > 0) {
+            const ratio = totalAciertos / totalIntentos;
+            const topPerc = zoneCoordinates[pos.key]?.top;
+            const leftPerc = angleOffsets[ang.key];
+            if (topPerc == null || leftPerc == null) return;
+            // Crear marcador
+            const marker = document.createElement('div');
+            marker.className = 'zone-marker';
+            marker.style.top = `calc(${topPerc}% - 12px)`;   // centrar en 24px
+            marker.style.left = `calc(${leftPerc}% - 12px)`;
+            marker.style.backgroundColor = getColorForRatio(ratio);
+            marker.textContent = `${Math.round(ratio * 100)}%`;
+            container.appendChild(marker);
+
+            // Fila en tabla
+            const tr = document.createElement('tr');
+            const tdPos = document.createElement('td');
+            tdPos.textContent = pos.label;
+            const tdAng = document.createElement('td');
+            // Aquí usamos directamente la label que ya tenemos:
+            tdAng.textContent = ang.label;
+            const tdAci = document.createElement('td');
+            tdAci.textContent = totalAciertos;
+            const tdInt = document.createElement('td');
+            tdInt.textContent = totalIntentos;
+            const tdPerc = document.createElement('td');
+            tdPerc.textContent = `${Math.round(ratio * 100)}%`;
+            tr.append(tdPos, tdAng, tdAci, tdInt, tdPerc);
+            statsTableBody.appendChild(tr);
           }
         });
-        // Eliminar marcadores previos y vaciar tabla
-        document.querySelectorAll('.zone-marker').forEach(el => el.remove());
-        statsTableBody.innerHTML = '';
+      });
 
-        // Asegurar que la imagen local se ha cargado
-        const img = document.getElementById('court-img');
-        if (!img.complete) {
-          await new Promise(res => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }
-
-        // Por cada posición y ángulo, si hay intentos, crear marcador y fila de tabla
-        posiciones.forEach(pos => {
-          angulos.forEach(ang => {
-            const { totalAciertos, totalIntentos } = stats[pos.key][ang.key];
-            if (totalIntentos > 0) {
-              const ratio = totalAciertos / totalIntentos;
-              const topPerc = zoneCoordinates[pos.key]?.top;
-              const leftPerc = angleOffsets[ang.key];
-              if (topPerc == null || leftPerc == null) return;
-              // Crear marcador
-              const marker = document.createElement('div');
-              marker.className = 'zone-marker';
-              marker.style.top = `calc(${topPerc}% - 12px)`;   // centrar en 24px
-              marker.style.left = `calc(${leftPerc}% - 12px)`;
-              marker.style.backgroundColor = getColorForRatio(ratio);
-              marker.textContent = `${Math.round(ratio * 100)}%`;
-              container.appendChild(marker);
-
-              // Fila en tabla
-              const tr = document.createElement('tr');
-              const tdPos = document.createElement('td');
-              tdPos.textContent = pos.label;
-              const tdAng = document.createElement('td');
-              const angLabelObj = angulos.find(a => a.key === ang);
-              tdAng.textContent = angLabelObj ? angLabelObj.label : ang;
-              const tdAci = document.createElement('td');
-              tdAci.textContent = totalAciertos;
-              const tdInt = document.createElement('td');
-              tdInt.textContent = totalIntentos;
-              const tdPerc = document.createElement('td');
-              tdPerc.textContent = `${Math.round(ratio * 100)}%`;
-              tr.append(tdPos, tdAng, tdAci, tdInt, tdPerc);
-              statsTableBody.appendChild(tr);
-            }
-          });
-        });
-
-        loadingDiv.style.display = 'none';
-      } catch (err) {
-        console.error("Error cargando estadísticas:", err);
-        loadingDiv.style.display = 'none';
-        errorDiv.textContent = 'Error cargando datos de Firestore. Revisa la consola.';
-      }
+      loadingDiv.style.display = 'none';
+    } catch (err) {
+      console.error("Error cargando estadísticas:", err);
+      loadingDiv.style.display = 'none';
+      errorDiv.textContent = 'Error cargando datos de Firestore. Revisa la consola.';
     }
+  }
 
     window.addEventListener('load', () => {
       fetchAndRender();
