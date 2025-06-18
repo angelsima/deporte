@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Entrenamiento Baloncesto - Día 1</title>
+<style>
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #111;
+    color: #eee;
+    margin: 0; padding: 2rem;
+  }
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #666;
+    padding-bottom: 0.5rem;
+  }
+  h3 {
+    cursor: pointer;
+    user-select: none;
+    margin: 1.5rem 0 0.5rem 0;
+    padding: 0.3rem 0.5rem;
+    background: #222;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+  }
+  h3:hover {
+    background: #333;
+  }
+  .content {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.4s ease;
+    background: #222;
+    padding: 0 1rem;
+    border-radius: 0 0 8px 8px;
+  }
+  .content.open {
+    padding: 1rem;
+    max-height: 2000px; /* suficientemente grande */
+  }
+  p, li {
+    font-size: 1.1rem;
+    line-height: 1.4;
+  }
+  ul {
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+  /* Estilos del listado de ejercicios (del bloque Dribble Workout) */
+  .exercise {
+    margin-bottom: 1rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #111;
+    transition: background 0.3s;
+  }
+  .exercise.done {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+  .exercise strong {
+    color: #0ff;
+  }
+  .rep-count {
+    font-weight: 700;
+    color: #0ff;
+  }
+  .note {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+  }
+  .sets {
+    margin-top: 0.4rem;
+  }
+  .set {
+    margin-right: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    color: #666;
+    font-weight: bold;
+  }
+  .set.checked {
+    color: #0f0;
+  }
+   
+    p {
+      margin-top: 0.2rem;
+      margin-bottom: 1rem;
+    }
+    #position-select-container {
+      margin-bottom: 1rem;
+    }
+    #position-select {
+      padding: 0.4rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #222;
+      color: #eee;
+    }
+    details {
+      margin-bottom: 1rem;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #222;
+    }
+    summary {
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      font-weight: bold;
+      user-select: none;
+      list-style: none;
+    }
+    summary:hover {
+      background: #333;
+    }
+    details[open] summary {
+      background: #333;
+    }
+    .details-content {
+      padding: 0 1rem 1rem 1rem;
+    }
+    .zone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .zone-card {
+      background: #222;
+      padding: 0.8rem 1rem;
+      border: 1px solid #444;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .zone-card label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    .input-pair {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.3rem;
+    }
+    .input-pair input[type="number"] {
+      width: 100%;
+      padding: 0.4rem;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #111;
+      color: #eee;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .input-pair input[type="number"]::-webkit-inner-spin-button,
+    .input-pair input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .input-pair input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    .input-pair .slash {
+      flex: none;
+      color: #ccc;
+      font-size: 1.2rem;
+    }
+    #submit-btn {
+      margin-top: 1.5rem;
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #submit-btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    #message {
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+</style>
+</head>
+<body>
+
+<h1>DÍA 1</h1>
+
+<section>
+  <h3>Calentamiento</h3>
+  <div class="content">
+    <p>Trote suave 5 minutos para activar el cuerpo.</p>
+  </div>
+</section>
+
+<section>
+  <h3>Dribble Workout</h3>
+  <div class="content" id="dribble-workout">
+    <!-- Aquí se cargarán los ejercicios dinámicos -->
+  </div>
+</section>
+
+<section>
+  <h3>Tiros</h3>
+  <div id="zones-container">
+    <!-- Se generarán <details> por posición con su grid de zonas -->
+  </div>
+
+  <button id="submit-btn">Guardar resultados</button>
+  <div id="message"></div>
+</section>
+
+<section>
+  <h3>Estiramiento</h3>
+  <div class="content">
+    <p>Gemelos y tobillos — estirar cada músculo al menos 30 segundos.</p>
+  </div>
+</section>
+
+<script>
+  // Lógica para desplegar/plegar las secciones
+  document.querySelectorAll('h3').forEach(h3 => {
+    h3.addEventListener('click', () => {
+      const content = h3.nextElementSibling;
+      if (content.classList.contains('open')) {
+        content.classList.remove('open');
+      } else {
+        content.classList.add('open');
+      }
+    });
+  });
+
+  // Ejercicios para Dribble Workout (del código que diste)
+  const exercises = [
+    { text: 'Pound R - Cambiando peso', type: 'time', duration: 2 },
+    { text: 'Pound L - Cambiando peso', type: 'time', duration: 2 },
+    { text: 'Cross - Cambiando peso', type: 'time', duration: 2 },
+    { text: 'Pound + Joke cross', type: 'time', duration: 2 },
+    { text: 'Joke cross', type: 'time', duration: 2 },
+    { text: 'Pound + BTL + xDetrás', type: 'reps', reps: 10 },
+    { text: 'BTL Split', type: 'reps', reps: 20, note: 'Neutro+pound, split+BTL, neutro+pound…' },
+    { text: 'Avanzar: Pound + Cross', type: 'reps', reps: 10, sets: 4 },
+    { text: 'Avanzar: Pound + BTL', type: 'reps', reps: 10, sets: 4 },
+    { text: 'Avanzar: (Pound + Cross) + (Pound + BTL)', type: 'reps', reps: 10, sets: 4 },
+  ];
+
+  const container = document.getElementById('dribble-workout');
+
+  function createExerciseElement(ex) {
+    const div = document.createElement('div');
+    div.classList.add('exercise');
+
+    let innerHTML = `<strong>${ex.text}</strong>`;
+    if (ex.type === 'time') {
+      innerHTML += ` <span>(duración: ${ex.duration}s)</span>`;
+    } else {
+      innerHTML += ` <span class="rep-count">x${ex.reps}</span>`;
+    }
+
+    if (ex.note) {
+      innerHTML += `<div class="note">${ex.note}</div>`;
+    }
+    if (ex.sets) {
+      innerHTML += `<div class="sets">${[...Array(ex.sets)].map(() => '<span class="set">◯</span>').join(' ')}</div>`;
+    }
+
+    div.innerHTML = innerHTML;
+
+    // Click para marcar como hecho (para reps)
+    if (ex.type === 'reps') {
+      div.addEventListener('click', () => div.classList.toggle('done'));
+    }
+
+    // Sets interactivos
+    const setsEls = div.querySelectorAll('.set');
+    setsEls.forEach((set, index) => {
+      set.addEventListener('click', e => {
+        e.stopPropagation();
+        for (let j = 0; j <= index; j++) setsEls[j].classList.add('checked');
+        for (let j = index + 1; j < setsEls.length; j++) setsEls[j].classList.remove('checked');
+
+        const allChecked = [...setsEls].every(s => s.classList.contains('checked'));
+        if (allChecked) div.classList.add('done');
+        else div.classList.remove('done');
+      });
+    });
+
+    return div;
+  }
+
+  exercises.forEach(ex => {
+    container.appendChild(createExerciseElement(ex));
+  });
+
+  <!-- Firebase v9 modular SDK desde CDN -->
+  <script type="module">
+    // Importa Firebase modular desde CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    // --------------------------------------------------
+    // TU CONFIG DE FIREBASE:
+    const firebaseConfig = {
+      apiKey: "AIzaSyCE19zdOFwGQyxJSw-idhIjIzLT3a9Wntk",
+      authDomain: "deporte-597c6.firebaseapp.com",
+      projectId: "deporte-597c6",
+      storageBucket: "deporte-597c6.firebasestorage.app",
+      messagingSenderId: "140373189508",
+      appId: "1:140373189508:web:bd5270d7c79764222273d1"
+    };
+    // --------------------------------------------------
+
+    // Inicializa Firebase y Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Definición de posiciones y ángulos
+    const posiciones = [
+      { key: 'Poste_bajo', label: 'Poste bajo' },
+      { key: 'Media', label: 'Media' },
+      { key: 'Tiro_libre', label: 'Tiro libre' },
+          ];
+    const angulos = [
+      { key: '0L', label: '0º L' },
+      { key: '30L', label: '30º L' },
+      { key: '45L', label: '45º L' },
+      { key: '60L', label: '60º L' },
+      { key: '90', label: '90º' },
+      { key: '60R', label: '60º R' },
+      { key: '45R', label: '45º R' },
+      { key: '30R', label: '30º R' },
+      { key: '0R', label: '0º R' }
+    ];
+
+    // Referencias DOM
+    const container = document.getElementById('zones-container');
+    const selectPos = document.getElementById('position-select');
+    const submitBtn = document.getElementById('submit-btn');
+    const msgDiv = document.getElementById('message');
+
+    // 1) Generar el selector de posiciones
+    posiciones.forEach(pos => {
+      const opt = document.createElement('option');
+      opt.value = pos.key; // coincide con id del <details>
+      opt.textContent = pos.label;
+      selectPos.appendChild(opt);
+    });
+
+    // 2) Generar <details> por cada posición
+    posiciones.forEach(pos => {
+      const detailsEl = document.createElement('details');
+      detailsEl.id = `pos-${pos.key}`; // p.e. "pos-Poste_bajo"
+      // Por defecto cerrado. Si quieres alguno abierto al inicio, agrega detailsEl.open = true.
+      const summaryEl = document.createElement('summary');
+      summaryEl.textContent = pos.label;
+      detailsEl.appendChild(summaryEl);
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'details-content';
+
+      // Dentro, un grid de zonas (ángulos)
+      const grid = document.createElement('div');
+      grid.className = 'zone-grid';
+
+      angulos.forEach(ang => {
+        // Por cada zona, creamos un card con dos inputs: aciertos y intentos
+        const card = document.createElement('div');
+        card.className = 'zone-card';
+
+        // label descriptivo
+        const label = document.createElement('label');
+        label.setAttribute('for', `input-${pos.key}-${ang.key}-aciertos`);
+        label.textContent = `${pos.label.replace('_',' ')} - ${ang.label}`;
+        card.appendChild(label);
+
+        // contenedor de inputs
+        const pairDiv = document.createElement('div');
+        pairDiv.className = 'input-pair';
+
+        // input aciertos
+        const inpAciertos = document.createElement('input');
+        inpAciertos.type = 'number';
+        inpAciertos.id = `input-${pos.key}-${ang.key}-aciertos`;
+        inpAciertos.name = inpAciertos.id;
+        inpAciertos.placeholder = 'Aciertos';
+        inpAciertos.min = '0';
+        inpAciertos.inputMode = 'numeric';
+        // no max fijo aquí, se actualizará dinámicamente según intentos
+        inpAciertos.style.flex = '1';
+
+        // slash fijo
+        const slash = document.createElement('span');
+        slash.className = 'slash';
+        slash.textContent = '/';
+
+        // input intentos
+        const inpIntentos = document.createElement('input');
+        inpIntentos.type = 'number';
+        inpIntentos.id = `input-${pos.key}-${ang.key}-intentos`;
+        inpIntentos.name = inpIntentos.id;
+        inpIntentos.placeholder = 'Intentos';
+        inpIntentos.min = '1';
+        inpIntentos.value = '10'; // valor por defecto
+        inpIntentos.inputMode = 'numeric';
+        inpIntentos.style.flex = '1';
+
+        // Cuando cambie intentos, ajustar max de aciertos y validar valor actual
+        inpIntentos.addEventListener('input', () => {
+          let valInt = parseInt(inpIntentos.value, 10);
+          if (isNaN(valInt) || valInt < 1) {
+            valInt = 1;
+            inpIntentos.value = '1';
+          }
+          // Ajustar atributo max en aciertos
+          inpAciertos.max = String(valInt);
+          // Si aciertos ya escrito > valInt, corregirlo
+          const valA = parseInt(inpAciertos.value, 10);
+          if (!isNaN(valA) && valA > valInt) {
+            inpAciertos.value = String(valInt);
+          }
+        });
+
+        // Inicialmente ajustar max de aciertos a 10
+        inpAciertos.max = '10';
+
+        pairDiv.appendChild(inpAciertos);
+        pairDiv.appendChild(slash);
+        pairDiv.appendChild(inpIntentos);
+
+        card.appendChild(pairDiv);
+        grid.appendChild(card);
+      });
+
+      contentDiv.appendChild(grid);
+      detailsEl.appendChild(contentDiv);
+      container.appendChild(detailsEl);
+    });
+
+    // 3) Selector de posición: al cambiar, cerrar todos y abrir solo la elegida, y hacer scroll
+    selectPos.addEventListener('change', () => {
+      const selected = selectPos.value; // p.e. "Poste_bajo" o ""
+      // Cerrar todos
+      posiciones.forEach(pos => {
+        const det = document.getElementById(`pos-${pos.key}`);
+        if (det) det.open = false;
+      });
+      if (selected) {
+        const detSel = document.getElementById(`pos-${selected}`);
+        if (detSel) {
+          detSel.open = true;
+          // Scroll suave
+          detSel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    });
+
+    // 4) Guardar resultados a Firestore al hacer click en botón
+    submitBtn.addEventListener('click', async () => {
+      msgDiv.textContent = '';
+      msgDiv.style.color = '#eee';
+
+      // Recorrer todas las zonas, solo procesar si aciertos tiene valor no vacío
+      const fechaLocal = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+      const promesas = [];
+      let anyError = false;
+      let anyEntry = false;
+
+      posiciones.forEach(pos => {
+        angulos.forEach(ang => {
+          const idAciertos = `input-${pos.key}-${ang.key}-aciertos`;
+          const idIntentos = `input-${pos.key}-${ang.key}-intentos`;
+          const inpA = document.getElementById(idAciertos);
+          const inpI = document.getElementById(idIntentos);
+          if (!inpA || !inpI) return;
+          const valA_str = inpA.value.trim();
+          if (valA_str === "") {
+            // omitir esta zona
+            return;
+          }
+          anyEntry = true;
+          // Parsear valores
+          let aciertosNum = parseInt(valA_str, 10);
+          let intentosNum = parseInt(inpI.value.trim(), 10);
+          // Validar intentos:
+          if (isNaN(intentosNum) || intentosNum < 1) {
+            anyError = true;
+            console.warn(`Intentos inválido en ${pos.key}-${ang.key}: ${inpI.value}`);
+            return;
+          }
+          // Validar aciertos:
+          if (isNaN(aciertosNum) || aciertosNum < 0) {
+            anyError = true;
+            console.warn(`Aciertos inválido en ${pos.key}-${ang.key}: ${valA_str}`);
+            return;
+          }
+          if (aciertosNum > intentosNum) {
+            // corregir a max
+            aciertosNum = intentosNum;
+          }
+          // Preparar envío
+          promesas.push(
+            addDoc(collection(db, "testInicialTiros"), {
+              fechaRegistro: serverTimestamp(),
+              fechaLocal: fechaLocal,
+              posicion: pos.key.replace('_', ' '),
+              angulo: ang.key,
+              intentos: intentosNum,
+              aciertos: aciertosNum
+            }).catch(err => {
+              console.error("Error guardando:", err);
+              anyError = true;
+            })
+          );
+        });
+      });
+
+      if (!anyEntry) {
+        msgDiv.style.color = '#f55';
+        msgDiv.textContent = 'No hay ningún acierto introducido. Escribe al menos un valor de aciertos para guardar.';
+        return;
+      }
+
+      // Deshabilitar durante envío
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando...';
+
+      try {
+        await Promise.all(promesas);
+      } catch (e) {
+        console.error("Error en Promise.all:", e);
+        anyError = true;
+      }
+
+      if (anyError) {
+        msgDiv.style.color = '#f55';
+        msgDiv.textContent = 'Ocurrió algún error guardando. Revisa consola y vuelve a intentarlo.';
+      } else {
+        msgDiv.style.color = '#0f0';
+        msgDiv.textContent = 'Resultados guardados con éxito.';
+        // Opcional: limpiar solo los campos que guardamos (dejando en blanco los aciertos)
+        posiciones.forEach(pos => {
+          angulos.forEach(ang => {
+            const inpA = document.getElementById(`input-${pos.key}-${ang.key}-aciertos`);
+            // si tenía valor, limpiar
+            if (inpA && inpA.value.trim() !== "") {
+              inpA.value = "";
+            }
+            // Mantener intentos en el valor que el usuario dejó, o reiniciar a 10 si prefieres:
+            // const inpI = document.getElementById(`input-${pos.key}-${ang.key}-intentos`);
+            // if (inpI) inpI.value = "10";
+          });
+        });
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Guardar resultados';
+    });
+
+    // Inicial: no abre nada hasta que el usuario seleccione o haga scroll manual
+</script>
+
+</body>
+</html>
